@@ -54,8 +54,8 @@ def get_settings(window=None, create_if_missing=None):
     return settings
 
 
-def get_ssh_listing(address, path, warn=True):
-    command = 'ssh -o StrictHostKeychecking=no "%s" ls -aF "%s"' % (address, path)
+def get_ssh_listing(address, path, port='22', warn=True):
+    command = 'ssh -p %s -o StrictHostKeychecking=no "%s" ls -aF "%s"' % (port, address, path)
     log('Command: \'%s\'' % command)
 
     pipe = subprocess.Popen(
@@ -86,7 +86,7 @@ def get_ssh_listing(address, path, warn=True):
     return {'error': error_message, 'items': items}
 
 
-def scp(from_path, to_path, create_if_missing=False):
+def scp(from_path, to_path, create_if_missing=False, port='22'):
     """
     Call out to the command line scp.
     Note: We don't do any authentication.
@@ -95,7 +95,7 @@ def scp(from_path, to_path, create_if_missing=False):
     IMPORTANT: If you try to write to a file you don't
     have write permissions on you will not get an error!
     """
-    command = 'scp -o StrictHostKeychecking=no "%s" "%s"' % (from_path, to_path)
+    command = 'scp -P %s -o StrictHostKeychecking=no "%s" "%s"' % (port, from_path, to_path)
     log('Command: \'%s\'' % command)
 
     pipe = subprocess.Popen(
@@ -184,12 +184,15 @@ class RemoteEditOpenRemoteFilePromptCommand(sublime_plugin.WindowCommand):
         address = self.ssh_config.get('address', self.alias)
         if 'username' in self.ssh_config:
             address = '%s@%s' % (self.ssh_config['username'], address)
+        port = '22'
+        if 'port' in self.ssh_config:
+            port = self.ssh_config['port']
         # TODO: Allow for a starting directory in the settings
         link = False
         if self.path.endswith('@'):
             self.path = self.path[:-1] + '/'
             link = True
-        result = get_ssh_listing(address, self.path, not link)
+        result = get_ssh_listing(address, self.path, port, not link)
         if link and result['error'] is not None:
             log('Link Failback, "%s" is not a directory. Trying file.' % self.path)
             self.window.run_command(
@@ -237,6 +240,10 @@ class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
         if 'username' in ssh_config:
             scp_path = '%s@%s' % (ssh_config['username'], scp_path)
 
+        scp_port='22'
+        if 'port' in ssh_config:
+            scp_port = ssh_config['port']
+
         # Do we already have this remote file open?
         view = temp_path = None
         for cur_view in self.window.views():
@@ -247,7 +254,7 @@ class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
         else:
             temp_path = os.path.join(tempfile.mkdtemp(), os.path.basename(real_path))
 
-            scp(scp_path, temp_path, create_if_missing)
+            scp(scp_path, temp_path, create_if_missing, scp_port)
 
             if not os.path.exists(temp_path):
                 return
@@ -259,6 +266,7 @@ class RemoteEditOpenRemoteFileCommand(sublime_plugin.WindowCommand):
             settings.set('remote_edit_scp_path', scp_path)
             settings.set('remote_edit_temp_path', temp_path)
             settings.set('remote_edit_create_if_missing', create_if_missing)
+            settings.set('remote_edit_scp_port', scp_port)
 
         log('Opened: "%s"' % scp_path)
         log('Temp: "%s"' % temp_path)
@@ -293,7 +301,8 @@ class RemoteEditReloadRemoteFileCommand(sublime_plugin.WindowCommand):
                     {
                         'alias': settings.get('remote_edit_alias'),
                         'path': settings.get('remote_edit_path'),
-                        'create_if_missing': settings.get('remote_edit_create_if_missing')
+                        'create_if_missing': settings.get('remote_edit_create_if_missing'),
+                        'port': settings.get('remote_edit_port')
                     }
                 )
                 active_view = self.window.active_view()
@@ -308,12 +317,14 @@ class RemoteEditListener(sublime_plugin.EventListener):
         settings = view.settings()
         if settings.has('remote_edit_create_if_missing') and\
             settings.has('remote_edit_scp_path') and\
-            settings.has('remote_edit_temp_path'):
+            settings.has('remote_edit_scp_port') and\
+            settings.has('remote_edit_temp_path'): 
             log('Saved: "%s"' % settings.get('remote_edit_scp_path'))
             scp(
                 settings.get('remote_edit_temp_path'),
                 settings.get('remote_edit_scp_path'),
-                settings.get('remote_edit_create_if_missing')
+                settings.get('remote_edit_create_if_missing'),
+                settings.get('remote_edit_scp_port')
             )
 
     def on_close(self, view):

@@ -36,22 +36,24 @@ In the file:
 Create an alias, an alias points to a configuration for a specific server.
 
 ```json
-	{
-		"debug": false,
-		"ssh_configs": {
-			"ALIASNAME": {
-				// Address of the remote server
-				// Not required, will default to the "ALIAS_NAME" string
-				"address": "IPADDRESS_OR_SERVERNAME",
-				// Username to log into server with
-				// Not required, the command line scp will default it to current user
-				"username": "USERNAME_ON_REMOTE_MACHINE"
-				// NOTE: Remember, to authenticate you need to have your pub key
-				// registered in the remote server ssh's authorized_keys file.,
-				"create_if_missing": false
-			},
-		}
-	}
+    {
+        "debug": false,
+        "ssh_configs": {
+            "ALIASNAME": {
+                // Address of the remote server
+                // Not required, will default to the "ALIAS_NAME" string
+                "address": "IPADDRESS_OR_SERVERNAME",
+                // SSH Port: default value 22
+                "port": "REMOTE SSH PORT",
+                // Username to log into server with
+                // Not required, the command line scp will default it to current user
+                "username": "USERNAME_ON_REMOTE_MACHINE"
+                // NOTE: Remember, to authenticate you need to have your pub key
+                // registered in the remote server ssh's authorized_keys file.,
+                "create_if_missing": false
+            },
+        }
+    }
 ```
 
 NOTE: no passwords are supported, you need to register your public key with the server.
@@ -69,25 +71,26 @@ Once you have your keys generated you can use this each time to send your pub ke
 In your current project file, you can also add aliases:
 
 ```json
-	{
-		"folders":
-		[
-			{
-			}
-		],
-		"remote_edit":
-		{
-			"ssh_configs":
-			{
-				"ALIASNAME":
-				{
-					"address": "IPADDRESS_OR_SERVERNAME",
-					"username": "USERNAME_ON_REMOTE_MACHINE",
-					"create_if_missing": false
-				}
-			}
-		}
-	}
+    {
+        "folders":
+        [
+            {
+            }
+        ],
+        "remote_edit":
+        {
+            "ssh_configs":
+            {
+                "ALIASNAME":
+                {
+                    "address": "IPADDRESS_OR_SERVERNAME",
+                    "port": "33322",
+                    "username": "USERNAME_ON_REMOTE_MACHINE",
+                    "create_if_missing": false
+                }
+            }
+        }
+    }
 ```
 
 
